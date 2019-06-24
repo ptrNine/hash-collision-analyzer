@@ -17,3 +17,5 @@ endif()
 add_executable(hash_collision main.cpp)
 
 target_link_libraries(hash_collision -pthread)
+
+install(TARGETS hash_collision RUNTIME DESTINATION bin)
