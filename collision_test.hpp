@@ -4,6 +4,7 @@
 #include <functional>
 #include <map>
 #include <chrono>
+#include <iomanip>
 
 #include "type_traits.hpp"
 #include "thread_safe_map.hpp"
@@ -251,7 +252,9 @@ namespace hctest {
                 if (!_silent) {
                     for (auto &h : locked_table) {
                         if (h.second.size() > 1) {
-                            std::cout << "Collision [" << std::hex << h.first << "]:" << std::endl;
+                            std::cout << "Collision [" << std::hex
+                                      << std::setfill('0') << std::setw(sizeof(h.first) * 2)
+                                      << h.first << "]:" << std::endl;
 
                             for (auto &s : h.second)
                                 std::cout << "\t" << s << std::endl;
