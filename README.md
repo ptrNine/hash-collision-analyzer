@@ -3,11 +3,11 @@ hash-collision-analyzer is tool for finding hash collisions from files with '\n'
 # Usage
 Common usage:
 
-    hash_collision [options]... [hash function name] [path/to/file]
+    ./hash_collision [options]... [hash function name] [path/to/file]
     
 For example:
 
-    hash_collision djb strings.txt
+    ./hash_collision djb strings.txt
 `djb` - hash function name. `strings.txt` - file with `'\n'` separated strings.
 
 Calling without parameters show list of available hash functions.
