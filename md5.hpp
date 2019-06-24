@@ -156,11 +156,13 @@ namespace md5 {
 
 
     inline Block128 md5(const char* str) {
-        std::vector<uint8_t> data;
+        if (!str)
+            return {};
 
-        std::size_t msg_bytes  = std::string_view(str).size();
+        std::vector<uint8_t> data;
+        std::size_t msg_bytes  = std::strlen(str);
         std::size_t blocks     = ((msg_bytes + 8U) >> 6U) + 1U;
-        uint64_t    input_bits = static_cast<uint64_t>(msg_bytes) << 3U;
+        auto        input_bits = static_cast<uint64_t>(msg_bytes) << 3U;
 
         std::size_t size_with_padding = blocks << 6U;
         data.resize(size_with_padding);
