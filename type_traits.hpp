@@ -28,7 +28,8 @@ namespace traits
             template <std::size_t _index>
             using args = std::tuple_element_t<_index, std::tuple<Args...>>;
         };
-    }
+
+    } // namespace details
 
     // Lambda
     template<typename Lambda>
@@ -79,7 +80,8 @@ namespace traits
 
     template <typename Type>
     ICB is_tuple_v = details::is_tuple_impl<std::decay_t<Type>>::value;
-}
+
+} // namespace traits
 
 #undef ICB
 #undef ICS

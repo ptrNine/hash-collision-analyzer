@@ -10,17 +10,19 @@
 #include "utils.hpp"
 
 #define HF(func) func, #func
+#define HFN(func, name) func, name
 
 namespace hctest {
+
     template <typename T>
     inline auto _get_func_or_str(T val)
-    -> std::enable_if_t<std::is_same_v<T, const char*>, std::string> {
+    -> std::enable_if_t<!std::is_function_v<std::remove_pointer_t<T>>, std::string> {
         return val;
     }
 
     template <typename T>
     inline auto _get_func_or_str(T val)
-    -> std::enable_if_t<!std::is_same_v<T, const char*>, decltype(std::function(val))>  {
+    -> std::enable_if_t<std::is_function_v<std::remove_pointer_t<T>>, decltype(std::function(val))>  {
         return std::function(val);
     }
 
@@ -88,6 +90,7 @@ namespace hctest {
                             } else {
                                 try {
                                     _nprocs = std::stoul(arg.substr(static_cast<std::size_t>((c + 1) - arg.begin())));
+                                    break;
                                 }
                                 catch (std::invalid_argument &e) {
                                     _nprocs = std::thread::hardware_concurrency();
@@ -154,7 +157,7 @@ namespace hctest {
 
                 auto hash = hash_func(str.c_str());
 
-                if constexpr (sizeof(decltype(hash_func((const char*)0))) <= 8) {
+                if constexpr (std::is_integral_v<decltype(hash)>) {
                     if (!hm.find_fn(hash, [&](StringVecT &strvec) {
                         strvec.push_back(str);
                     }))
@@ -188,10 +191,10 @@ namespace hctest {
 
         template <typename HashValT>
         static auto _get_map_impl() {
-            if constexpr (sizeof(HashValT) <= 8)
+            if constexpr (std::is_integral_v<HashValT>)
                 return cuckoohash_map<HashValT, StringVecT>();
             else
-                hcutils::TSVectorMap<HashValT, std::string>();
+                return hcutils::TSVectorMap<HashValT, std::string>();
         }
 
         template <std::size_t _HashFuncNum>
@@ -235,7 +238,7 @@ namespace hctest {
 
             std::cout << "Results for " << hash_name << std::endl;
 
-            if constexpr (sizeof(HashT) <= 8) {
+            if constexpr (std::is_integral_v<HashT>) {
                 std::size_t collisions_count = 0;
                 auto locked_table = map_impl.lock_table();
 
@@ -265,7 +268,7 @@ namespace hctest {
                 std::cout << "Total collisions count: " << collisions_count << std::endl;
 
                 if (!_silent) {
-                    for (auto &h : map_impl()) {
+                    for (auto &h : map_impl) {
                         if (h.second.size() > 1) {
                             std::cout << "Collision [" << std::hex << h.first << "]:" << std::endl;
 
@@ -350,4 +353,5 @@ namespace hctest {
         std::size_t _nprocs = 1;
         bool        _silent = false;
     };
-}
+
+} // namespace hctest

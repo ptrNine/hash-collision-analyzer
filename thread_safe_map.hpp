@@ -28,4 +28,4 @@ namespace hcutils {
         mutable std::mutex _mutex;
     };
 
-}
+} // namespace hcutils

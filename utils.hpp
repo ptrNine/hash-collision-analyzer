@@ -6,6 +6,7 @@
 #include <vector>
 
 namespace hcutils {
+
     inline auto read_file_to_buffer(const std::string& path) -> std::vector<char> {
         auto ifs = std::ifstream(path, std::ios::in);
 
@@ -25,4 +26,5 @@ namespace hcutils {
 
         return std::move(buffer);
     }
-}
+
+} // namespace utils
