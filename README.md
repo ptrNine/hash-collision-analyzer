@@ -8,22 +8,21 @@ Common usage:
 For example:
 
     hash_collision djb strings.txt
-'djb' - hash function name; 'strings.txt' - file with '\n' separated strings.
-
+`djb` - hash function name. `strings.txt` - file with `'\n'` separated strings.
 
 Calling without parameters show list of available hash functions.
 
 # Building
 hash-collision-analyzer tested on Linux Mint 19 with g++ 8.2.0 and clang-7. Required C++17 for building.
 Also hash-collision-analyzer depends on [libcuckoo](https://github.com/efficient/libcuckoo)
-(used for find collisions in multiple threads).
+(used for finding hash collisions in multiple threads).
 
 # Hash functions
 Almost every hash function can be easily added.
 
 There are two requirements:
-1. Hash function must accept const char* string ONLY.
-2. Hash function must return integers or type with specialized 'operator<' and 'ostream operator<<'
+1. Hash function must accept `const char*` string ONLY.
+2. Hash function must return integers or type with specialized `operator<` and `ostream operator<<`
 
 For example, this function:
 
@@ -45,7 +44,7 @@ static auto hash_functions = hctest::generate_hct_tuple(
 ```
 
 If hash function calculate checksums with size larger then 8 bytes then it should returns structure with defined
-'ostream operator <<' and "operator <':
+`ostream operator <<` and `operator <`:
 
 ```c++
 class Checksum128 {
