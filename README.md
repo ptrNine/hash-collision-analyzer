@@ -21,14 +21,14 @@ Also hash-collision-analyzer depends on [libcuckoo](https://github.com/efficient
 Almost every hash function can be easily added.
 
 There are two requirements:
-1. Hash function must accept `const char*` string ONLY.
+1. Hash function must accept `const uint8_t*` array and `size_t` length.
 2. Hash function must return integer or a value whose type complies with all requirements of `std::map` key and 
    declares `std::ostream& operator<<()`. 
 
 For example, this hash function:
 
 ```c++
-uint32_t my_hash_func_impl(const char* str) {
+uint32_t my_func(const uint8_t* str, size_t size) {
     ...
 }
 ```
@@ -36,11 +36,11 @@ uint32_t my_hash_func_impl(const char* str) {
 can be easily added with:
 
 ```c++
-static auto hash_functions = hctest::generate_hct_tuple(
-    HF(djb),
-    HF(fnv1a32),
-    HF(fnv1a64),
-    HF(my_hash_func_impl)
+static auto hash_functions = std::make_tuple(
+        hctest::hf(djb,      "djb",     "DJB"        ),
+        hctest::hf(fnv1a32,  "fnv1a32", "FNV1a 32bit"),
+        hctest::hf(fnv1a64,  "fnv1a64", "FNV1a 64bit"),
+        hctest::hf(my_func,  "my-func-name", "My function real name" )
 );
 ```
 
@@ -61,7 +61,7 @@ public:
     uint32_t data[4];
 }
 
-Checksum128 my_hash_func_impl(const char* str) {
+Checksum128 my_func(const uint8_t* str, size_t size) {
     ...
 }
 ```

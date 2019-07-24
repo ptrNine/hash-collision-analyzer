@@ -133,7 +133,6 @@ namespace md5 {
             os << std::hex << std::setfill('0') << std::setw(16) << b.lo;
             os << std::hex << std::setfill('0') << std::setw(16) << b.hi;
 #endif
-
             return os;
         }
 
@@ -155,20 +154,16 @@ namespace md5 {
     };
 
 
-    inline Block128 md5(const char* str) {
-        if (!str)
-            return {};
+    inline Block128 md5(const uint8_t* str, size_t size) {
+        size_t blocks            = ((size + 8U) >> 6U) + 1U;
+        size_t size_with_padding = blocks << 6U;
 
-        std::vector<uint8_t> data;
-        std::size_t msg_bytes  = std::strlen(str);
-        std::size_t blocks     = ((msg_bytes + 8U) >> 6U) + 1U;
-        auto        input_bits = static_cast<uint64_t>(msg_bytes) << 3U;
+        auto data = std::vector<uint8_t>(size_with_padding, 0);
+        std::memcpy(data.data(), str, size);
 
-        std::size_t size_with_padding = blocks << 6U;
-        data.resize(size_with_padding);
-        std::memcpy(data.data(), str, msg_bytes);
+        data[size] = static_cast<char>(0x80);
 
-        data[msg_bytes] = static_cast<char>(0x80);
+        auto input_bits = static_cast<uint64_t>(size) << 3U;
 
         *reinterpret_cast<uint64_t*>(&data[(blocks << 6U) - 8U]) = input_bits;
 
@@ -185,25 +180,25 @@ namespace md5 {
         uint32_t* bytes_ptr;
         uint32_t  words[16U];
 
-        for (std::size_t cb = 0; cb < blocks; ++cb) {
+        for (size_t cb = 0; cb < blocks; ++cb) {
             bytes_ptr = (uint32_t*)(&(data[cb << 6U]));
 
-            words[0]    = bytes_ptr[0];
-            words[1]    = bytes_ptr[1];
-            words[2]    = bytes_ptr[2];
-            words[3]    = bytes_ptr[3];
-            words[4]    = bytes_ptr[4];
-            words[5]    = bytes_ptr[5];
-            words[6]    = bytes_ptr[6];
-            words[7]    = bytes_ptr[7];
-            words[8]    = bytes_ptr[8];
-            words[9]    = bytes_ptr[9];
-            words[10]   = bytes_ptr[10];
-            words[11]   = bytes_ptr[11];
-            words[12]   = bytes_ptr[12];
-            words[13]   = bytes_ptr[13];
-            words[14]   = bytes_ptr[14];
-            words[15]   = bytes_ptr[15];
+            words[0]  = bytes_ptr[0];
+            words[1]  = bytes_ptr[1];
+            words[2]  = bytes_ptr[2];
+            words[3]  = bytes_ptr[3];
+            words[4]  = bytes_ptr[4];
+            words[5]  = bytes_ptr[5];
+            words[6]  = bytes_ptr[6];
+            words[7]  = bytes_ptr[7];
+            words[8]  = bytes_ptr[8];
+            words[9]  = bytes_ptr[9];
+            words[10] = bytes_ptr[10];
+            words[11] = bytes_ptr[11];
+            words[12] = bytes_ptr[12];
+            words[13] = bytes_ptr[13];
+            words[14] = bytes_ptr[14];
+            words[15] = bytes_ptr[15];
 
             uint32_t a = a0;
             uint32_t b = b0;
@@ -231,6 +226,10 @@ namespace md5 {
         hash[3] = d0;
 
         return hash;
+    }
+
+    Block128 md5(const char* str) {
+        return md5(reinterpret_cast<const uint8_t*>(str), strlen(str));
     }
 
 } // namespace md5

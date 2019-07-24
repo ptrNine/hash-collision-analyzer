@@ -10,10 +10,41 @@
 #include "thread_safe_map.hpp"
 #include "utils.hpp"
 
-#define HF(func) func, #func
-#define HFN(func, name) func, name
+#define DECLARE_TUPLE_GETTER(name, tuple_pos)                                            \
+template <size_t _I, typename T>                                                         \
+inline auto&& name(T&& tpl)     { return std::get<tuple_pos>(std::get<_I>(tpl)); } \
+template <size_t _I, typename T>                                                         \
+inline auto& name(const T& tpl) { return std::get<tuple_pos>(std::get<_I>(tpl)); } \
+template <size_t _I, typename T>                                                         \
+inline auto& name(T& tpl)       { return std::get<tuple_pos>(std::get<_I>(tpl)); }
 
 namespace hctest {
+    template <typename T>
+    using HcTuple = std::tuple<
+            std::function<T(const uint8_t*, size_t)>,
+            std::string,
+            std::string>;
+
+    DECLARE_TUPLE_GETTER(_get_func,      0)
+    DECLARE_TUPLE_GETTER(_get_name,      1)
+    DECLARE_TUPLE_GETTER(_get_real_name, 2)
+
+    template <typename T>
+    inline auto hf(
+            T(*function)(const uint8_t*, size_t),
+            const std::string& name,
+            const std::string& real_name
+    ) {
+        return HcTuple<decltype(function((const uint8_t*)nullptr, (size_t)0))>(
+                function,
+                name,
+                real_name);
+    }
+
+    template <typename T>
+    inline auto hf(T(*function)(const uint8_t*, size_t), const std::string& name) {
+        return hf(function, name, name);
+    }
 
     template <typename T>
     inline auto _get_func_or_str(T val)
@@ -27,12 +58,6 @@ namespace hctest {
         return std::function(val);
     }
 
-    template <typename... ArgT>
-    inline auto generate_hct_tuple(ArgT... argv) {
-        return std::make_tuple(_get_func_or_str(argv)...);
-    }
-
-
     template <typename TupleFuncT>
     class HashCollisionTest {
     public:
@@ -44,9 +69,7 @@ namespace hctest {
         using SwitchRunFuncT = std::function<int(const StringVecT&, HashCollisionTest& hct)>;
 
     public:
-        explicit HashCollisionTest(TupleFuncT tuple_f): _tuple_funcs (std::move(tuple_f)) {
-            _check_tuple_f();
-        }
+        explicit HashCollisionTest(TupleFuncT tuple_f): _tuple_funcs (std::move(tuple_f)) {}
 
         int run(int argc = 0, char* argv[] = nullptr) {
             StringVecT args;
@@ -156,7 +179,7 @@ namespace hctest {
 
                 start++;
 
-                auto hash = hash_func(str.c_str());
+                auto hash = hash_func(reinterpret_cast<const uint8_t*>(str.c_str()), str.length());
 
                 if constexpr (std::is_integral_v<decltype(hash)>) {
                     if (!hm.find_fn(hash, [&](StringVecT &strvec) {
@@ -216,8 +239,8 @@ namespace hctest {
             const char* end   = buf.data() + buf.size();
 
 
-            auto& hash_func = std::get<_HashFuncNum + 0>(_tuple_funcs);
-            auto& hash_name = std::get<_HashFuncNum + 1>(_tuple_funcs);
+            auto& hash_func      = _get_func     <_HashFuncNum>(_tuple_funcs);
+            auto& hash_real_name = _get_real_name<_HashFuncNum>(_tuple_funcs);
 
             using HashT = traits::return_type_of<decltype(hash_func)>;
 
@@ -235,9 +258,10 @@ namespace hctest {
 
             auto elapsed = std::chrono::high_resolution_clock::now() - time;
 
-            std::cerr << "Elapsed time: " << std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() / 1000.0 << "s" << std::endl;
+            std::cerr << "Elapsed time: " << std::chrono::duration_cast<
+                    std::chrono::milliseconds>(elapsed).count() / 1000.0 << "s" << std::endl;
 
-            std::cout << "Results for " << hash_name << std::endl;
+            std::cout << "Results for " << hash_real_name << std::endl;
 
             if constexpr (std::is_integral_v<HashT>) {
                 std::size_t collisions_count = 0;
@@ -304,13 +328,13 @@ namespace hctest {
         auto _switched_run_cases(const StringVecT& args, StringVecT& available_hash_funcs)
         -> std::enable_if_t<(_Iter < std::tuple_size_v<TupleFuncT>), int>
         {
-            if (available_hash_funcs.emplace_back(std::get<_Iter + 1>(_tuple_funcs)),
-                args[0] == std::get<_Iter + 1>(_tuple_funcs))
+            if (available_hash_funcs.emplace_back(_get_name<_Iter>(_tuple_funcs)),
+                args[0] == _get_name<_Iter>(_tuple_funcs))
             {
                 return _process_main<_Iter>(args);
             }
             else
-                return _switched_run_cases<_Iter + 2>(args, available_hash_funcs);
+                return _switched_run_cases<_Iter + 1>(args, available_hash_funcs);
         }
 
         template <std::size_t _Iter>
@@ -332,24 +356,6 @@ namespace hctest {
             return _switched_run_cases(args, available_hash_funcs);
         }
 
-        template <std::size_t _Iter = 0, std::size_t _Size = std::tuple_size_v<TupleFuncT>>
-        static constexpr auto _check_tuple_f() -> std::enable_if_t<_Iter != _Size>
-        {
-            using FunctT =
-                    std::remove_reference_t<
-                            decltype(std::get<_Iter>(std::declval<TupleFuncT>()))>;
-
-            static_assert(traits::args_count<FunctT> == 1,
-                          "Wrong arguments count. Hash function must accept one const char* string.");
-            static_assert(std::is_same_v<traits::arg_type_of<FunctT, 0>, const char*>,
-                          "Invalid argument type. Hash function must accept one const char* string.");
-
-            _check_tuple_f<_Iter + 2, _Size>();
-        }
-
-        template <std::size_t _Iter = 0, std::size_t _Size>
-        static constexpr auto _check_tuple_f() -> std::enable_if_t<_Iter == _Size> {}
-
     private:
         TupleFuncT _tuple_funcs;
 
@@ -358,3 +364,6 @@ namespace hctest {
     };
 
 } // namespace hctest
+
+
+#undef DECLARE_TUPLE_GETTER
